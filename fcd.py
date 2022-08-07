@@ -16,6 +16,8 @@ import argparse
 import json
 import readline
 
+VERSION = '1.0.0'
+
 class Files: # pylint: disable=too-few-public-methods
     """A class with all predefined filenames as class global attributes used by the program."""
 
@@ -62,6 +64,8 @@ def parse_args():
                        help="delete an alias")
     parser.add_argument("-c", "--command", type=str, nargs='?', const=True,
                         help="add or update associated command")
+    parser.add_argument("-v", "--version", type=str, nargs='?', const=True,
+                        help="Print the current version number")
     parser.add_argument('alias', metavar="Alias", type=str, nargs='?',
                         help="Set CWD to the path associated with this alias")
     return vars(parser.parse_args())
@@ -253,6 +257,10 @@ def command_handler(args, repository, records, completer):
 def main():
     """Main program"""
     args = parse_args()
+
+    if args.get('version') is True:
+        print('v{}'.format(VERSION))
+        sys.exit(0)
 
     # Cleanup from previous execution
     try:
