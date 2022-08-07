@@ -1,0 +1,17 @@
+@startuml fcd.py
+(*) -->[main()] "parse_args"
+if "args has version" then
+    -->[True] "print version"
+    -->(*)
+else
+    -->[False] "Cleanup, (remove old files)"
+--> "load_repository()"
+--> "Create an alphabetic sorted list of aliases from repo"
+--> "Create a completer with the aliases"
+--> "Create a list of all records in alphabetic sorted order"
+if "args has alias or no args" then
+    -->[True] "alias_handler()"
+if "args has add" then
+    -->[True] "add_handler()"
+--> (*)
+@enduml
