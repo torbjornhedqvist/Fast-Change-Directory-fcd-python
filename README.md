@@ -101,6 +101,8 @@ For more information type:
 Hope you will enjoy using **fcd** and it will save some precious time for you.
 
 ### Other projects at github I found addressing the same use case
+- <https://github.com/Gyumeijie/dirx>
+- <https://github.com/inwtx/Linux-change-directory-script>
 
-<https://github.com/Gyumeijie/dirx>
-<https://github.com/inwtx/Linux-change-directory-script>
+### Other own previous projects solving the same problems (written in perl)
+- <https://github.com/torbjornhedqvist/Fast-Change-Directory-fcd-perl>
