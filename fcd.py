@@ -261,10 +261,6 @@ def main():
     """Main program"""
     args = parse_args()
 
-    if args.get('version') is True:
-        print('v{}'.format(VERSION))
-        sys.exit(0)
-
     # Cleanup from previous execution
     try:
         if os.path.exists(Files.DIR):
@@ -273,6 +269,10 @@ def main():
             os.remove(Files.CMD)
     except OSError as err:
         sys.exit(err)
+
+    if args.get('version') is True:
+        print('v{}'.format(VERSION))
+        sys.exit(0)
 
     repository = load_repository()
     aliases = sorted(repository.keys(), key=str.lower) # To be used for tab completion
