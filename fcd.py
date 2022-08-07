@@ -25,6 +25,7 @@ class Files: # pylint: disable=too-few-public-methods
     DIR = '{}{}'.format(os.path.expanduser("~"), '/.fcd_dir')
     CMD = '{}{}'.format(os.path.expanduser("~"), '/.fcd_cmd')
 
+
 class TabComplete: # pylint: disable=too-few-public-methods
     """A TAB completer class for readline"""
 
@@ -35,6 +36,7 @@ class TabComplete: # pylint: disable=too-few-public-methods
         """tab completer function"""
         results = [x for x in self._aliases if x.startswith(text)] + [None]
         return results[state]
+
 
 class Color: # pylint: disable=too-few-public-methods
     """ANSI Colors to be used in terminal output"""
@@ -253,6 +255,7 @@ def command_handler(args, repository, records, completer):
     print("Updated entry: [{}] {} : {}".format(
         line, repository[line]['directory'], repository[line]['command']))
     save_repository(repository)
+
 
 def main():
     """Main program"""
