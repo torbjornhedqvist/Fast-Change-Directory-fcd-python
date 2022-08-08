@@ -187,20 +187,12 @@ def alias_handler(args, repository, records, completer):
 
 
 def add_handler(args, repository):
-    """Handles the add command line argument and add a new record with alias, current directory and
-    associated command to the repository, (if -c/--command are provided at the same time)."""
-
+    """Handles the add command line argument and add a new record with alias and current directory
+    """
     arg_add = args.get('add')
     if arg_add not in repository:
-        cmd = ''
-        if args.get('command') is not None:
-            if args.get('command') is True:
-                cmd = input('Provide command to be added: ')
-            else:
-                cmd = args.get('command')
-
-        add_record = {"directory": os.getcwd(), "command": cmd}
-        print('Adding directory "{}" with associated command "{}"'.format(os.getcwd(), cmd))
+        add_record = {"directory": os.getcwd(), "command": ''}
+        print('Creating record [{}] "{}"'.format(arg_add , os.getcwd()))
         repository.update({arg_add : add_record})
         save_repository(repository)
     else:
@@ -225,38 +217,51 @@ def delete_handler(args, repository, records, completer):
                 list_records(records, alias)
         # Match found through tab completion
         repository.pop(alias)
+        tmp_records = records
+        for record in records:
+            if record[0] == alias:
+                tmp_records.remove(record)
+        records = tmp_records
         print("\"{}\" deleted".format(alias))
     else:
         # Exact argument match found
         repository.pop(arg_delete)
+        tmp_records = records
+        for record in records:
+            if record[0] == arg_delete:
+                tmp_records.remove(record)
+        records = tmp_records
         print("\"{}\" deleted".format(arg_delete))
     save_repository(repository)
 
 
 def command_handler(args, repository, records, completer):
-    """Handles the 'command' command line argument and associates commands which will be
-    executed after the change directory have occurred."""
-    alias = '' # tab pre_input_hook empty
-    list_records(records, alias, True)
-    print("Select which entry to add or update command:")
-    while alias not in repository:
-        alias = read_input(completer, alias, 'fcd (select entry)> ')
-        if alias not in repository:
-            list_records(records, alias, True)
+    """Handles the command line argument for adding or updating a 'command' to a record."""
+    if args.get('add') in repository:
+        alias = args.get('add')
+    else:
+        alias = '' # tab pre_input_hook empty
+        list_records(records, alias, True)
+        print("Select which entry to add or update command:")
+        while alias not in repository:
+            alias = read_input(completer, alias, 'fcd (select entry)> ')
+            if alias not in repository:
+                list_records(records, alias, True)
+
     if args.get('command') is True:
         readline.set_pre_input_hook(None) # reset from previous setting in the read_input above
         cmd = input('Provide command to be added or updated: ')
     else:
         cmd = args.get('command')
+
     repository[alias]['command'] = cmd
-    print("Updated entry: [{}] {} : {}".format(
+    print("Updated or added command to record: [{}] {} : {}".format(
         alias, repository[alias]['directory'], repository[alias]['command']))
     save_repository(repository)
 
 
 def main():
     """Main program"""
-    args = parse_args()
 
     # Cleanup from previous execution
     try:
@@ -266,6 +271,8 @@ def main():
             os.remove(Files.CMD)
     except OSError as err:
         sys.exit(err)
+
+    args = parse_args()
 
     if args.get('version') is True:
         print('v{}'.format(VERSION))
@@ -292,7 +299,8 @@ def main():
         # Delete is mutually exclusive with Add
         delete_handler(args, repository, records, completer)
 
-    if args.get('command') is not None and args.get('add') is None:
+    #if args.get('command') is not None and args.get('add') is None:
+    if args.get('command') is not None:
         # This means a command is provided as an argument, maybe empty, and it's not in combination
         # with an add argument.
         command_handler(args, repository, records, completer)
