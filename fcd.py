@@ -10,7 +10,6 @@ to frequently visited directories. Since it's impossible to change your shell's 
 directory from within the program this program requires some additional shell scripts,
 (included in the repository). See the README.md for more information.
 """
-from audioop import add
 import sys
 import os
 import argparse
@@ -74,8 +73,11 @@ def parse_args():
     return vars(parser.parse_args())
 
 
-def load_repository():
-    """Load the repository from file"""
+def load_repository() -> dict:
+    """Load the repository from file
+
+    Returns: repository as a dict.
+    """
     try:
         if os.path.exists(Files.REPOSITORY):
             file = open(Files.REPOSITORY)
@@ -87,16 +89,20 @@ def load_repository():
                 Files.REPOSITORY))
             print('Creates a new repository with a dummy record which can be removed later.')
             print(Color.RESET, end='')
-            jsonString = '{"dummy": {"directory": "/dummy", "command": ""}}'
-            repository = json.loads(jsonString)
+            json_string = '{"dummy": {"directory": "/dummy", "command": ""}}'
+            repository = json.loads(json_string)
             save_repository(repository)
         return repository
     except IOError as err:
         sys.exit(err)
 
 
-def save_repository(repository):
-    """Save the current repository in memory to file"""
+def save_repository(repository: dict):
+    """Save the current repository in memory to file
+
+    Args:
+        repository: as a dict.
+    """
     try:
         with open(Files.REPOSITORY, 'w') as file:
             json.dump(repository, file)
@@ -105,10 +111,15 @@ def save_repository(repository):
         sys.exit(err)
 
 
-def save_for_later_execution(repository, alias):
+def save_for_later_execution(repository: dict, alias: str):
     """Save the directory path and command, (if not empty) to the two separate files which will
     be used later by the external bash script to change directory and execute the command if
-    available."""
+    available.
+
+    Args:
+        repository: as a dict.
+        alias: alias key to the record to be saved.
+    """
     if os.path.isdir(repository[alias]['directory']):
         # The directory path stored in the repository actually exists in the file system, save the
         # directory path to file.
@@ -203,7 +214,7 @@ def add_handler(args, repository):
     arg_add = args.get('add')
     if arg_add not in repository:
         add_record = {"directory": os.getcwd(), "command": ''}
-        print('Creating record [{}] "{}"'.format(arg_add , os.getcwd()))
+        print('Creating record [{}] "{}"'.format(arg_add, os.getcwd()))
         repository.update({arg_add : add_record})
         save_repository(repository)
     else:
