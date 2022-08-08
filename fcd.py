@@ -10,6 +10,7 @@ to frequently visited directories. Since it's impossible to change your shell's 
 directory from within the program this program requires some additional shell scripts,
 (included in the repository). See the README.md for more information.
 """
+from audioop import add
 import sys
 import os
 import argparse
@@ -76,9 +77,19 @@ def parse_args():
 def load_repository():
     """Load the repository from file"""
     try:
-        file = open(Files.REPOSITORY)
-        repository = json.load(file)
-        file.close()
+        if os.path.exists(Files.REPOSITORY):
+            file = open(Files.REPOSITORY)
+            repository = json.load(file)
+            file.close()
+        else:
+            print(Color.LIGHT_YELLOW, end='')
+            print('No repository {} exists in your home directory, first time usage?'.format(
+                Files.REPOSITORY))
+            print('Creates a new repository with a dummy record which can be removed later.')
+            print(Color.RESET, end='')
+            jsonString = '{"dummy": {"directory": "/dummy", "command": ""}}'
+            repository = json.loads(jsonString)
+            save_repository(repository)
         return repository
     except IOError as err:
         sys.exit(err)
