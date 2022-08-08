@@ -168,27 +168,22 @@ def alias_handler(args, repository, records, completer):
         # No arguments at all, including alias given from command line
         # Indicates that the user would like to see the full content of the repository and
         # choose an alias from the listed records.
-        alias = ''
+        alias = '' # tab pre_input_hook empty
     else:
         alias = args.get('alias')
 
     if alias in repository:
         # A complete alias found in repository
         save_for_later_execution(repository, alias)
-        #write_alias(repository, alias, Files.DIR, Files.CMD)
     else:
         # Incomplete/partial alias, let's use tab completion
         list_records(records, alias)
-        line = None
-        hook_message = alias
-        while line not in repository:
-            line = read_input(completer, hook_message)
-            if line not in repository:
-                hook_message = line
-                list_records(records, line)
+        while alias not in repository:
+            alias = read_input(completer, alias)
+            if alias not in repository:
+                list_records(records, alias)
         # Now we have a complete alias found in repository
-        save_for_later_execution(repository, line)
-        #write_alias(repository, line, Files.DIR, Files.CMD)
+        save_for_later_execution(repository, alias)
 
 
 def add_handler(args, repository):
@@ -220,18 +215,19 @@ def delete_handler(args, repository, records, completer):
     if arg_delete is True or arg_delete not in repository:
         # No or incomplete argument provided, let's go into interactive mode
         if arg_delete is True:
-            line = '' # tab pre_input_hook empty
+            alias = '' # tab pre_input_hook empty
         else:
-            line = arg_delete
-        list_records(records, line)
-        while line not in repository:
-            line = read_input(completer, line, 'fcd (delete entry)> ')
-            if line not in repository:
-                list_records(records, line)
-        repository.pop(line)
-        print("\"{}\" deleted".format(line))
+            alias = arg_delete
+        list_records(records, alias)
+        while alias not in repository:
+            alias = read_input(completer, alias, 'fcd (delete entry)> ')
+            if alias not in repository:
+                list_records(records, alias)
+        # Match found through tab completion
+        repository.pop(alias)
+        print("\"{}\" deleted".format(alias))
     else:
-        # exact argument match found
+        # Exact argument match found
         repository.pop(arg_delete)
         print("\"{}\" deleted".format(arg_delete))
     save_repository(repository)
@@ -240,20 +236,21 @@ def delete_handler(args, repository, records, completer):
 def command_handler(args, repository, records, completer):
     """Handles the 'command' command line argument and associates commands which will be
     executed after the change directory have occurred."""
-    line = '' # tab pre_input_hook empty
-    list_records(records, line, True)
+    alias = '' # tab pre_input_hook empty
+    list_records(records, alias, True)
     print("Select which entry to add or update command:")
-    while line not in repository:
-        line = read_input(completer, line, 'fcd (select entry)> ')
-        if line not in repository:
-            list_records(records, line, True)
+    while alias not in repository:
+        alias = read_input(completer, alias, 'fcd (select entry)> ')
+        if alias not in repository:
+            list_records(records, alias, True)
     if args.get('command') is True:
+        readline.set_pre_input_hook(None) # reset from previous setting in the read_input above
         cmd = input('Provide command to be added or updated: ')
     else:
         cmd = args.get('command')
-    repository[line]['command'] = cmd
+    repository[alias]['command'] = cmd
     print("Updated entry: [{}] {} : {}".format(
-        line, repository[line]['directory'], repository[line]['command']))
+        alias, repository[alias]['directory'], repository[alias]['command']))
     save_repository(repository)
 
 
