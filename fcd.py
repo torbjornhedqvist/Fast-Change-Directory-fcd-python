@@ -66,7 +66,7 @@ def parse_args():
                        help="delete an alias")
     parser.add_argument("-c", "--command", type=str, nargs='?', const=True,
                         help="add or update associated command")
-    parser.add_argument("-v", "--version", type=str, nargs='?', const=True,
+    parser.add_argument("-v", "--version", action='store_true',
                         help="Print the current version number")
     parser.add_argument('alias', metavar="Alias", type=str, nargs='?',
                         help="Set CWD to the path associated with this alias")

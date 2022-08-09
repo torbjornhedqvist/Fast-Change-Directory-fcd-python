@@ -12,10 +12,18 @@ recap to myself when I haven't touched this project for some months ;)
 ## parse_args
 
 Creates a Python "argparse" construct with all valid arguments which can be
-provided from the command line.
+provided from the command line. The commands `--add` and `--delete` are
+mutually exclusive, meaning only one of them can be present as argument on the
+command line when the program is called. `--add` requires a mandatory second
+value (representing the alias), for all other arguments additional values are
+optional.
+
 Returns a dictionary with the values of all arguments. Dependent if they are
 mandatory or optional they can have a value of `None`, `True` or a string
 value.
+
+This is a good source for argparse:
+https://docs.python.org/3/library/argparse.html
 
 ## load_repository
 
@@ -27,7 +35,7 @@ This is an example of the format of this file:
 ```json
 {
   "fcd": {
-    "directory": "/home/etorhed/repos/Fast-Change-Directory-fcd-python",
+    "directory": "/home/etorhed/repos/fcd",
     "command": ""
   },
   "dl": {
@@ -35,6 +43,12 @@ This is an example of the format of this file:
     "command": "ll"
   }
 }
+```
+
+Resulting in a repository dictionary, (nested dicts), looking like this:
+```python
+{'fcd': {'directory': '/home/etorhed/repos/fcd', 'command': ''},
+'dl': {'directory': '/mnt/c/Users/etorhed/Downloads', 'command': 'll'}}
 ```
 
 ## alias_handler
@@ -80,8 +94,15 @@ field, and program will exit with an error message.
 
 This function will just do a simple check that the alias is not already
 present in the repository, if not it will take the **current working
-directory (cwd)** and add it to the repository, save it to file as
-described in `save_repository` below and finally return back to main.
+directory (cwd)** and add it to the repository as a new dictionary record,
+An example of a record dict looks like this:
+
+```
+{'directory': '/mnt/c/Users/etorhed/Downloads', 'command': ''}
+```
+
+Saves it to file as described in `save_repository` below and finally
+return back to main.
 
 > **_NOTE:_** There is no check if the current directory already
 > exists associated with another alias, that is completely ok and
@@ -89,13 +110,35 @@ described in `save_repository` below and finally return back to main.
 
 ## save_repository
 
-TBD
+Saves the repository dictionary back out to the file `~/.fcd.json` in
+json format.
 
 ## delete_handler
 
-TBD
+If `-d [alias]` or `--delete [alias]` where alias is optional, is
+provided on the command line this function will be called.
+
+If an exact match of an alias is provided the associated record will be
+removed from the repository and saved to file as described in
+`save_repository` above. If no or an incomplete alias, (not found in the
+repository), is provided it will go into TAB completion mode until a
+match is found in the repository or you abort the program with Ctrl-C.
+If a match is found the associated record will be removed from the
+repository and saved to file as described in `save_repository` above.
+Finally returns back to main.
 
 ## command_handler
 
-TBD
+If `-c [cmd]` or `--command [cmd]` where cmd is optional, is provided on the
+command line this function will be called.
+It will first check if this comes after a call to `add_handler`, in that case
+the exact alias is already provided and can be used. If not, the function will
+ask you to provide the alias name on the record you would like to add or
+update the command for. TAB completion will be supported to find the correct
+record.
+
+When a record is selected it will update it with the `cmd` provided on the
+command line (if it is provided), else it will ask you to type in a command
+to add. When this is done it will be saved to file as described in
+`save_repository` above. Finally returns back to main.
 
