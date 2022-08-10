@@ -27,12 +27,16 @@ class Files: # pylint: disable=too-few-public-methods
 
 
 class TabComplete: # pylint: disable=too-few-public-methods
-    """A TAB completer class for readline"""
+    """A TAB completer class for readline
 
-    def __init__(self, aliases):
+    Args: aliases is a list of strings pulled from the alias keyword in the repository and
+        will be used for comparison in the complete function provided to readline.
+    """
+
+    def __init__(self, aliases: list):
         self._aliases = aliases
 
-    def complete(self, text, state):
+    def complete(self, text: str, state: int) -> str:
         """tab completer function"""
         results = [x for x in self._aliases if x.startswith(text)] + [None]
         return results[state]
@@ -54,8 +58,12 @@ class Color: # pylint: disable=too-few-public-methods
     RESET = '\033[0m'
 
 
-def parse_args():
-    """Parse the command line arguments"""
+def parse_args() -> dict:
+    """Parse the command line arguments. If any of the rules defined by this function
+    is broken, the program will abort with a clear error message given by argparse.
+
+    Returns: vars as a dict with all available arguments as keys.
+    """
     parser = argparse.ArgumentParser(
         description="(F)ast (C)hange (D)irectory",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -76,7 +84,8 @@ def parse_args():
 def load_repository() -> dict:
     """Load the repository from file
 
-    Returns: repository as a dict.
+    Returns: repository. The whole repository as a dict of dicts with records where each
+        record is a dict containing the key value pairs of directory and command.
     """
     try:
         if os.path.exists(Files.REPOSITORY):
@@ -101,7 +110,8 @@ def save_repository(repository: dict):
     """Save the current repository in memory to file
 
     Args:
-        repository: as a dict.
+        repository: The whole repository as a dict of dicts with records where each
+            record is a dict containing the key value pairs of directory and command.
     """
     try:
         with open(Files.REPOSITORY, 'w') as file:
@@ -112,13 +122,14 @@ def save_repository(repository: dict):
 
 
 def save_for_later_execution(repository: dict, alias: str):
-    """Save the directory path and command, (if not empty) to the two separate files which will
-    be used later by the external bash script to change directory and execute the command if
-    available.
+    """Save the directory path and command, (if not empty) to the separate files Files.DIR
+    and Files.CMD. These files will be used later by the external bash script to change
+    directory and execute the command if available.
 
     Args:
-        repository: as a dict.
-        alias: alias key to the record to be saved.
+        repository: The whole repository as a dict of dicts with records.
+        alias: alias as a string which is the key to the record containing the directory
+            and commands to be saved.
     """
     if os.path.isdir(repository[alias]['directory']):
         # The directory path stored in the repository actually exists in the file system, save the
@@ -147,8 +158,20 @@ def save_for_later_execution(repository: dict, alias: str):
         sys.exit(1)
 
 
-def list_records(records, input_value='', show_cmd=False, use_colors=True):
-    """List all alias and directory records"""
+def list_records(records: list, alias: str = '', show_cmd: bool = False,
+                 use_colors: bool = True):
+    """List all alias and directory records
+
+    Args:
+        records: as a list of dict's containing records with alias, directory and command
+        alias: As a string to search and list all the records starting with the characters
+            in this string.
+        show_cmd: Default False. If True it will list the associated commands to each
+            record.
+        use_colors: Default True and will will toggle the output color if the first character
+            changes for the alias in the next record in records. If set to False no colors
+            will be used.
+    """
     first_char = ''
     if use_colors is True:
         current_color = Color.LIGHT_BLUE
@@ -163,7 +186,7 @@ def list_records(records, input_value='', show_cmd=False, use_colors=True):
                 current_color = Color.LIGHT_BLUE
         first_char = record[0][0]
 
-        if record[0].startswith(input_value):
+        if record[0].startswith(alias):
             if show_cmd is True:
                 print("{}[{}] {} : {}".format(current_color, record[0], record[1], record[2]))
             else:
@@ -171,8 +194,18 @@ def list_records(records, input_value='', show_cmd=False, use_colors=True):
     print(Color.RESET, end='')
 
 
-def read_input(completer, hook_message, prompt='fcd> '):
-    """Common function to use the tab completer function and read an input line"""
+def read_input(completer: TabComplete, hook_message: str, prompt: str = 'fcd> ') -> str:
+    """Common function to use the tab completer function and read an input line
+
+    Args:
+        completer: A TabComplete instance prepared with a list of aliases created from
+            all records in the repository.
+        hook_message: A string containing some prepared text which the completer should
+            start to match against the stored list of aliases.
+        prompt: A string which will be used as the prompt in the call to input().
+
+    Returns: The output given from the input() call as a string.
+    """
     readline.parse_and_bind("tab: complete")
     readline.set_completer(completer.complete)
     def hook():
@@ -184,8 +217,16 @@ def read_input(completer, hook_message, prompt='fcd> '):
     return line
 
 
-def alias_handler(args, repository, records, completer):
-    """Handles all combinations of aliases provided as argument on command line"""
+def alias_handler(args: dict, repository: dict, records: list, completer: TabComplete):
+    """Handles all combinations of aliases provided as argument on command line
+
+    Args:
+        args: All command line arguments as a dict.
+        repository: The whole repository as a dict of dicts with records.
+        records: All the records in a sorted alphabetic list
+        completer: A TabComplete instance prepared with a list of aliases created from
+            all records in the repository.
+    """
     if len(sys.argv) == 1:
         # No arguments at all, including alias given from command line
         # Indicates that the user would like to see the full content of the repository and
@@ -208,8 +249,12 @@ def alias_handler(args, repository, records, completer):
         save_for_later_execution(repository, alias)
 
 
-def add_handler(args, repository):
+def add_handler(args: dict, repository: dict):
     """Handles the add command line argument and add a new record with alias and current directory
+
+    Args:
+        args: All command line arguments as a dict.
+        repository: The whole repository as a dict of dicts with records.
     """
     arg_add = args.get('add')
     if arg_add not in repository:
@@ -223,8 +268,16 @@ def add_handler(args, repository):
         sys.exit(1)
 
 
-def delete_handler(args, repository, records, completer):
-    """Handles the delete command line argument"""
+def delete_handler(args: dict, repository: dict, records: list, completer: TabComplete):
+    """Handles the delete command line argument
+
+    Args:
+        args: All command line arguments as a dict.
+        repository: The whole repository as a dict of dicts with records.
+        records: All the records in a sorted alphabetic list
+        completer: A TabComplete instance prepared with a list of aliases created from
+            all records in the repository.
+    """
     arg_delete = args.get('delete')
     if arg_delete is True or arg_delete not in repository:
         # No or incomplete argument provided, let's go into interactive mode
@@ -257,8 +310,16 @@ def delete_handler(args, repository, records, completer):
     save_repository(repository)
 
 
-def command_handler(args, repository, records, completer):
-    """Handles the command line argument for adding or updating a 'command' to a record."""
+def command_handler(args: dict, repository: dict, records: list, completer: TabComplete):
+    """Handles the command line argument for adding or updating a 'command' to a record.
+
+    Args:
+        args: All command line arguments as a dict.
+        repository: The whole repository as a dict of dicts with records.
+        records: All the records in a sorted alphabetic list
+        completer: A TabComplete instance prepared with a list of aliases created from
+            all records in the repository.
+    """
     if args.get('add') in repository:
         alias = args.get('add')
     else:
