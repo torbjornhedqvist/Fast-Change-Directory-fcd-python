@@ -382,10 +382,7 @@ def main():
         # Delete is mutually exclusive with Add
         delete_handler(args, repository, records, completer)
 
-    #if args.get('command') is not None and args.get('add') is None:
     if args.get('command') is not None:
-        # This means a command is provided as an argument, maybe empty, and it's not in combination
-        # with an add argument.
         command_handler(args, repository, records, completer)
 
 
