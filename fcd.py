@@ -16,15 +16,17 @@ import argparse
 import json
 import readline
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 class Files: # pylint: disable=too-few-public-methods
     """A class with all predefined filenames as class global attributes used by the program."""
 
-    REPOSITORY = '{}{}'.format(os.path.expanduser("~"), '/.fcd.json')
-    DIR = '{}{}'.format(os.path.expanduser("~"), '/.fcd_dir')
-    CMD = '{}{}'.format(os.path.expanduser("~"), '/.fcd_cmd')
-
+    # REPOSITORY = '{}{}'.format(os.path.expanduser("~"), '/.fcd.json')
+    REPOSITORY = f'{os.path.expanduser("~")}{"/.fcd.json"}'
+    # DIR = '{}{}'.format(os.path.expanduser("~"), '/.fcd_dir')
+    DIR = f'{os.path.expanduser("~")}{"/.fcd_dir"}'
+    # CMD = '{}{}'.format(os.path.expanduser("~"), '/.fcd_cmd')
+    CMD = f'{os.path.expanduser("~")}{"/.fcd_cmd"}'
 
 class TabComplete: # pylint: disable=too-few-public-methods
     """A TAB completer class for readline
@@ -89,21 +91,20 @@ def load_repository() -> dict:
     """
     try:
         if os.path.exists(Files.REPOSITORY):
-            file = open(Files.REPOSITORY)
-            repository = json.load(file)
-            file.close()
+            with open(Files.REPOSITORY, encoding = 'utf-8') as file:
+                repository = json.load(file)
         else:
             print(Color.LIGHT_YELLOW, end='')
-            print('No repository {} exists in your home directory, first time usage?'.format(
-                Files.REPOSITORY))
+            print(f'No repository {Files.REPOSITORY} exists in your home directory', end='')
+            print(', first time usage?')
             print('Creates a new repository with a dummy record which can be removed later.')
             print(Color.RESET, end='')
             json_string = '{"dummy": {"directory": "/dummy", "command": ""}}'
             repository = json.loads(json_string)
             save_repository(repository)
         return repository
-    except IOError as err:
-        sys.exit(err)
+    except IOError as io_error:
+        sys.exit(io_error)
 
 
 def save_repository(repository: dict):
@@ -114,11 +115,11 @@ def save_repository(repository: dict):
             record is a dict containing the key value pairs of directory and command.
     """
     try:
-        with open(Files.REPOSITORY, 'w') as file:
+        with open(Files.REPOSITORY, 'w', encoding = 'utf-8') as file:
             json.dump(repository, file)
             file.close()
-    except IOError as err:
-        sys.exit(err)
+    except IOError as io_error:
+        sys.exit(io_error)
 
 
 def save_for_later_execution(repository: dict, alias: str):
@@ -134,27 +135,24 @@ def save_for_later_execution(repository: dict, alias: str):
     if os.path.isdir(repository[alias]['directory']):
         # The directory path stored in the repository actually exists in the file system, save the
         # directory path to file.
-        dir_path = '{}\n'.format(repository[alias]['directory'])
+        dir_path = f'{repository[alias]["directory"]}\n'
         try:
-            file = open(Files.DIR, 'w')
-            file.write(dir_path)
-            file.close()
-        except IOError as err:
-            sys.exit(err)
+            with open(Files.DIR, 'w', encoding = 'utf-8') as file:
+                file.write(dir_path)
+        except IOError as io_error:
+            sys.exit(io_error)
 
         if repository[alias]['command'] != '':
             # This record have an associated command, save the cmd to file.
-            cmd = '{}\n'.format(repository[alias]['command'])
+            cmd = f'{repository[alias]["command"]}\n'
             try:
-                file = open(Files.CMD, 'w')
-                file.write(cmd)
-                file.close()
+                with open(Files.CMD, 'w', encoding = 'utf-8') as file:
+                    file.write(cmd)
             except IOError as err:
                 sys.exit(err)
     else:
-        print('{}Directory "{}" doesn\'t exist, recommended to remove record, aborting!'.format(
-            Color.LIGHT_RED, repository[alias]['directory']))
-        print(Color.RESET, end='')
+        print(f'{Color.LIGHT_RED}Directory "{repository[alias]["directory"]}" doesn\'t exist,\
+ recommended to remove record, aborting!{Color.RESET}')
         sys.exit(1)
 
 
@@ -188,9 +186,9 @@ def list_records(records: list, alias: str = '', show_cmd: bool = False,
 
         if record[0].startswith(alias):
             if show_cmd is True:
-                print("{}[{}] {} : {}".format(current_color, record[0], record[1], record[2]))
+                print(f'{current_color}[{record[0]}] {record[1]} : {record[2]}')
             else:
-                print("{}[{}] {}".format(current_color, record[0], record[1]))
+                print(f'{current_color}[{record[0]}] {record[1]}')
     print(Color.RESET, end='')
 
 
@@ -259,12 +257,11 @@ def add_handler(args: dict, repository: dict):
     arg_add = args.get('add')
     if arg_add not in repository:
         add_record = {"directory": os.getcwd(), "command": ''}
-        print('Creating record [{}] "{}"'.format(arg_add, os.getcwd()))
+        print(f'Creating record [{arg_add}] "{os.getcwd()}"')
         repository.update({arg_add : add_record})
         save_repository(repository)
     else:
-        print('{}Alias "{}" already exists, aborting!{}'.format(
-            Color.LIGHT_RED, arg_add, Color.RESET))
+        print(f'{Color.LIGHT_RED}Alias "{arg_add}" already exists, aborting!{Color.RESET}')
         sys.exit(1)
 
 
@@ -297,7 +294,7 @@ def delete_handler(args: dict, repository: dict, records: list, completer: TabCo
             if record[0] == alias:
                 tmp_records.remove(record)
         records = tmp_records
-        print("\"{}\" deleted".format(alias))
+        print(f'"{alias}" deleted')
     else:
         # Exact argument match found
         repository.pop(arg_delete)
@@ -306,7 +303,7 @@ def delete_handler(args: dict, repository: dict, records: list, completer: TabCo
             if record[0] == arg_delete:
                 tmp_records.remove(record)
         records = tmp_records
-        print("\"{}\" deleted".format(arg_delete))
+        print(f'"{arg_delete}" deleted')
     save_repository(repository)
 
 
@@ -338,8 +335,8 @@ def command_handler(args: dict, repository: dict, records: list, completer: TabC
         cmd = args.get('command')
 
     repository[alias]['command'] = cmd
-    print("Updated or added command to record: [{}] {} : {}".format(
-        alias, repository[alias]['directory'], repository[alias]['command']))
+    print(f'Updated or added command to record: [{alias}] ', end='')
+    print(f'{repository[alias]["directory"]} : {repository[alias]["command"]}')
     save_repository(repository)
 
 
@@ -352,13 +349,13 @@ def main():
             os.remove(Files.DIR)
         if os.path.exists(Files.CMD):
             os.remove(Files.CMD)
-    except OSError as err:
-        sys.exit(err)
+    except OSError as io_error:
+        sys.exit(io_error)
 
     args = parse_args()
 
     if args.get('version') is True:
-        print('v{}'.format(VERSION))
+        print(f'v{VERSION}')
         sys.exit(0)
 
     repository = load_repository()
@@ -389,6 +386,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except KeyboardInterrupt as err:
+    except KeyboardInterrupt as kb_interrupt:
         print('Interrupted')
-        sys.exit(err)
+        sys.exit(kb_interrupt)
