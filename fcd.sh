@@ -11,6 +11,13 @@
 #  b) execute the commands in ~/.fcd_cmd
 #
 fcd.py $@
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    # fcd.py have exited abnormally
+    echo "Aborting"
+    return $retVal
+fi
+
 
 # Created on succesful call to fcd.py
 if [ -e ~/.fcd_dir ]; then

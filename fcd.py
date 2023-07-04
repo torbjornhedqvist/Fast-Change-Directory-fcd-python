@@ -89,14 +89,14 @@ def load_repository() -> dict:
     Returns: repository. The whole repository as a dict of dicts with records where each
         record is a dict containing the key value pairs of directory and command.
     """
+    status = 0
     try:
         if os.path.exists(Files.REPOSITORY):
             with open(Files.REPOSITORY, encoding = 'utf-8') as file:
                 repository = json.load(file)
         else:
-            print(Color.LIGHT_YELLOW, end='')
-            print(f'No repository {Files.REPOSITORY} exists in your home directory', end='')
-            print(', first time usage?')
+            print(f'{Color.LIGHT_YELLOW}No repository {Files.REPOSITORY} exists in your ', end='')
+            print('home directory, first time usage?')
             print('Creates a new repository with a dummy record which can be removed later.')
             print(Color.RESET, end='')
             json_string = '{"dummy": {"directory": "/dummy", "command": ""}}'
@@ -105,7 +105,9 @@ def load_repository() -> dict:
         return repository
     except IOError as io_error:
         sys.exit(io_error)
-
+    except json.decoder.JSONDecodeError as json_decoder_error:
+        print(f'{Files.REPOSITORY} is empty, please delete it and it will be created properly')
+        sys.exit(json_decoder_error)
 
 def save_repository(repository: dict):
     """Save the current repository in memory to file
@@ -117,7 +119,6 @@ def save_repository(repository: dict):
     try:
         with open(Files.REPOSITORY, 'w', encoding = 'utf-8') as file:
             json.dump(repository, file)
-            file.close()
     except IOError as io_error:
         sys.exit(io_error)
 
@@ -369,23 +370,22 @@ def main():
         record = [alias, repository[alias]['directory'], repository[alias]['command']]
         records.append(record)
 
-    if args.get('alias') is not None or len(sys.argv) == 1:
-        # A partial or complete alias or no argument at all given from command line
-        alias_handler(args, repository, records, completer)
+    try:
+        if args.get('alias') is not None or len(sys.argv) == 1:
+            # A partial or complete alias or no argument at all given from command line
+            alias_handler(args, repository, records, completer)
 
-    if args.get('add') is not None:
-        add_handler(args, repository)
-    elif args.get('delete') is not None:
-        # Delete is mutually exclusive with Add
-        delete_handler(args, repository, records, completer)
+        if args.get('add') is not None:
+            add_handler(args, repository)
+        elif args.get('delete') is not None:
+            # Delete is mutually exclusive with Add
+            delete_handler(args, repository, records, completer)
 
-    if args.get('command') is not None:
-        command_handler(args, repository, records, completer)
-
+        if args.get('command') is not None:
+            command_handler(args, repository, records, completer)
+    except KeyboardInterrupt as kb_interrupt:
+        print('Keyboard interrupt')
+        sys.exit(1)
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt as kb_interrupt:
-        print('Interrupted')
-        sys.exit(kb_interrupt)
+    main()
