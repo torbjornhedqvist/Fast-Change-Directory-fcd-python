@@ -89,7 +89,6 @@ def load_repository() -> dict:
     Returns: repository. The whole repository as a dict of dicts with records where each
         record is a dict containing the key value pairs of directory and command.
     """
-    status = 0
     try:
         if os.path.exists(Files.REPOSITORY):
             with open(Files.REPOSITORY, encoding = 'utf-8') as file:
@@ -149,8 +148,8 @@ def save_for_later_execution(repository: dict, alias: str):
             try:
                 with open(Files.CMD, 'w', encoding = 'utf-8') as file:
                     file.write(cmd)
-            except IOError as err:
-                sys.exit(err)
+            except IOError as io_error:
+                sys.exit(io_error)
     else:
         print(f'{Color.LIGHT_RED}Directory "{repository[alias]["directory"]}" doesn\'t exist,\
  recommended to remove record, aborting!{Color.RESET}')
@@ -354,7 +353,6 @@ def main():
         sys.exit(io_error)
 
     args = parse_args()
-
     if args.get('version') is True:
         print(f'v{VERSION}')
         sys.exit(0)
@@ -383,7 +381,7 @@ def main():
 
         if args.get('command') is not None:
             command_handler(args, repository, records, completer)
-    except KeyboardInterrupt as kb_interrupt:
+    except KeyboardInterrupt:
         print('Keyboard interrupt')
         sys.exit(1)
 
