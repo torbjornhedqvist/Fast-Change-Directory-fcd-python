@@ -16,7 +16,7 @@ import argparse
 import json
 import readline
 
-VERSION = '1.0.1'
+VERSION = '1.1.0'
 
 def parse_args() -> dict:
     """Parse the command line arguments. If any of the rules defined by this function
