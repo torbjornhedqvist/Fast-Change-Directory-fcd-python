@@ -5,7 +5,7 @@ You may use, distribute and modify this code under the
 terms of the MIT license. See LICENSE file in the project
 root for full license information.
 
-(F)ast (C)hange (D)irectory, fcd is a utility program to make it easier to create shortcuts
+Fast Change Directory (fcd), fcd is a utility program to make it easier to create shortcuts
 to frequently visited directories. Since it's impossible to change your shell's current working
 directory from within the program this program requires some additional shell scripts,
 (included in the database). See the README.md for more information.
@@ -41,7 +41,7 @@ def parse_args() -> dict:
     Returns: vars as a dict with all available arguments as keys.
     """
     parser = argparse.ArgumentParser(
-        description="(F)ast (C)hange (D)irectory",
+        description="Fast Change Directory (fcd)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     group = parser.add_mutually_exclusive_group(required=False)
@@ -61,41 +61,41 @@ class Files: # pylint: disable=too-few-public-methods
     """A class with all predefined filenames as class global attributes used by the program."""
 
     def __init__(self) -> None:
-        self._db_filename = f'{os.path.expanduser("~")}{"/.fcd.json"}'
-        self._dir_filename = f'{os.path.expanduser("~")}{"/.fcd_dir"}'
-        self._cmd_filename = f'{os.path.expanduser("~")}{"/.fcd_cmd"}'
+        self._db_file = f'{os.path.expanduser("~")}{"/.fcd.json"}'
+        self._dir_file = f'{os.path.expanduser("~")}{"/.fcd_dir"}'
+        self._cmd_file = f'{os.path.expanduser("~")}{"/.fcd_cmd"}'
 
     # All getter methods
     @property
-    def db_filename(self) -> str:
+    def db_file(self) -> str:
         """Filename where the database will be stored"""
-        return self._db_filename
+        return self._db_file
 
     @property
-    def dir_filename(self) -> str:
+    def dir_file(self) -> str:
         """Filename where alias matching directory path will be stored"""
-        return self._dir_filename
+        return self._dir_file
 
     @property
-    def cmd_filename(self) -> str:
+    def cmd_file(self) -> str:
         """Filename where alias matching command will be stored"""
-        return self._cmd_filename
+        return self._cmd_file
 
     # All setter methods
-    @db_filename.setter
-    def db_filename(self, value: str) -> None:
+    @db_file.setter
+    def db_file(self, value: str) -> None:
         """Set the database filename"""
-        self._db_filename = value
+        self._db_file = value
 
-    @dir_filename.setter
-    def dir_filename(self, value: str) -> None:
+    @dir_file.setter
+    def dir_file(self, value: str) -> None:
         """Set the directory path filename"""
-        self._dir_filename = value
+        self._dir_file = value
 
-    @cmd_filename.setter
-    def cmd_filename(self, value: str) -> None:
+    @cmd_file.setter
+    def cmd_file(self, value: str) -> None:
         """Set the command filename"""
-        self._cmd_filename = value
+        self._cmd_file = value
 
 
 class TabComplete: # pylint: disable=too-few-public-methods
@@ -157,11 +157,11 @@ class Db:
 
 
 class Fcd:
-    """Main Class for (F)ast (C)hange (D)irectory"""
+    """Main Class for Fast Change Directory (fcd)"""
 
     def __init__(self) -> None:
         self._files = Files()
-        self._db_handler = Db(self._files.db_filename)
+        self._db_handler = Db(self._files.db_file)
         self._db = self._db_handler.load()
 
         # Aliases to be used for tab completion
@@ -172,7 +172,7 @@ class Fcd:
 
     def save_for_later_execution(self, alias: str):
         """Save the directory path and command, (if not empty) to the separate files
-        self._files.dir_filename and self._files.cmd_filename. These files will be used later
+        self._files.dir_file and self._files.cmd_file. These files will be used later
         by the external bash script to change directory and execute the command if available.
 
         Args:
@@ -184,7 +184,7 @@ class Fcd:
             # save the directory path to file.
             dir_path = f'{self._db[alias]["directory"]}\n'
             try:
-                with open(self._files.dir_filename, 'w', encoding = 'utf-8') as file:
+                with open(self._files.dir_file, 'w', encoding = 'utf-8') as file:
                     file.write(dir_path)
             except IOError as io_error:
                 sys.exit(io_error)
@@ -193,7 +193,7 @@ class Fcd:
                 # This record have an associated command, save the cmd to file.
                 cmd = f'{self._db[alias]["command"]}\n'
                 try:
-                    with open(self._files.cmd_filename, 'w', encoding = 'utf-8') as file:
+                    with open(self._files.cmd_file, 'w', encoding = 'utf-8') as file:
                         file.write(cmd)
                 except IOError as io_error:
                     sys.exit(io_error)
@@ -381,17 +381,16 @@ class Fcd:
         """ Cleanup and remove files from previous execution
         """
         try:
-            if os.path.exists(self._files.dir_filename):
-                os.remove(self._files.dir_filename)
-            if os.path.exists(self._files.cmd_filename):
-                os.remove(self._files.cmd_filename)
+            if os.path.exists(self._files.dir_file):
+                os.remove(self._files.dir_file)
+            if os.path.exists(self._files.cmd_file):
+                os.remove(self._files.cmd_file)
         except OSError as io_error:
             sys.exit(io_error)
 
     def execute(self, args) -> None:
         """ Main Fcd execution
         """
-        self.clean_up()
 
         # Create a list of all records in alphabetic order which will be used as a helper in
         # combination with the tab completion.
@@ -422,11 +421,11 @@ class Fcd:
 def main():
     """Main program"""
     fcd = Fcd()
+    fcd.clean_up()
 
     args = parse_args()
     if args.get('version') is True:
         print(f'v{VERSION}')
-        fcd.clean_up()
         sys.exit(0)
 
     fcd.execute(args)
