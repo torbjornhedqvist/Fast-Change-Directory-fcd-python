@@ -11,7 +11,6 @@ directory from within the program this program requires some additional shell sc
 (included in the database). See the README.md for more information.
 """
 import logging
-# import logging.config
 import sys
 import os
 import argparse
@@ -25,7 +24,7 @@ logging.basicConfig(filename=f'{os.path.expanduser("~")}{"/fcd.log"}',
                     filemode='w',
                     format='%(asctime)s:[%(levelname)s]:%(name)s:%(filename)s:%(funcName)s:\
 %(lineno)d:(%(message)s)',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 
 class Color: # pylint: disable=too-few-public-methods
     """ANSI Colors to be used in terminal output"""
@@ -147,7 +146,6 @@ class Db:
                 with open(self._db_file, encoding = 'utf-8') as file:
                     database = json.load(file)
             else:
-                logging.info('No database')
                 print(f'{Color.LIGHT_YELLOW}No database {self._db_file} exists ', end='')
                 print('in your home directory, first time usage?')
                 print('Creates a new database with a dummy record which can be removed later.')
@@ -160,7 +158,6 @@ class Db:
             sys.exit(io_error)
         except json.decoder.JSONDecodeError as json_decoder_error:
             print(f'{self._db_file} is empty, please delete the file and execute again')
-            logging.info('%s exists but is empty', self._db_file)
             sys.exit(json_decoder_error)
         logging.debug('Exit: %s', database)
         return database
@@ -173,6 +170,7 @@ class Db:
             with open(self._db_file, 'w', encoding = 'utf-8') as file:
                 json.dump(database, file)
         except IOError as io_error:
+            logging.error(io_error)
             sys.exit(io_error)
         logging.debug('Exit')
 
@@ -211,6 +209,7 @@ class Fcd:
             dir_path = f'{self._db[alias]["directory"]}\n'
             try:
                 with open(self._files.dir_file, 'w', encoding = 'utf-8') as file:
+                    logging.debug('Write "%s" to %s', dir_path, self._files.dir_file)
                     file.write(dir_path)
             except IOError as io_error:
                 logging.error(io_error)
@@ -221,6 +220,7 @@ class Fcd:
                 cmd = f'{self._db[alias]["command"]}\n'
                 try:
                     with open(self._files.cmd_file, 'w', encoding = 'utf-8') as file:
+                        logging.debug('Write "%s" to %s', cmd, self._files.cmd_file)
                         file.write(cmd)
                 except IOError as io_error:
                     logging.error(io_error)
@@ -293,23 +293,20 @@ class Fcd:
         logging.debug('Exit: %s', line)
         return line
 
-    def alias_handler(self, args: dict, records: list) -> None:
+    def alias_handler(self, alias: str, records: list) -> None:
         """Handles all combinations of aliases provided as argument on command line
 
         Args:
-            args: All command line arguments as a dict.
+            alias: A string which can be empty or contain a partial or complete alias.
             records: All the records in a sorted alphabetic list
 
         Returns: None
         """
-        logging.debug('Enter')
-        if len(sys.argv) == 1 or (args.get('log_level') is not None and len(sys.argv) == 3):
-            # No arguments at all, including alias given from command line
-            # Indicates that the user would like to see the full content of the database and
-            # choose an alias from the listed records.
-            alias = '' # tab pre_input_hook empty
-        else:
-            alias = args.get('alias')
+        if not isinstance(alias, str):
+            raise ValueError(f'Invalid type: {type(alias)}')
+        if not isinstance(records, list):
+            raise ValueError(f'Invalid type: {type(records)}')
+        logging.debug('Enter: alias="%s"', alias)
 
         if alias in self._db:
             # A complete alias found in database
@@ -325,17 +322,20 @@ class Fcd:
             self.save_for_later_execution(alias)
         logging.debug('Exit')
 
-    def add_handler(self, args: dict) -> None:
+    def add_handler(self, arg_add: str) -> None:
         """Handles the add command line argument and add a new record with alias and current
         directory
 
         Args:
-            args: All command line arguments as a dict.
+            arg_add: A string containing the desired alias to be connected to the current directory
+            and stored as an entry in the database.
 
         Returns: None
         """
-        logging.debug('Enter')
-        arg_add = args.get('add')
+        if not isinstance(arg_add, str):
+            raise ValueError(f'Invalid type: {type(arg_add)}')
+        logging.debug('Enter: arg_add=%s', arg_add)
+
         if arg_add not in self._db:
             add_record = {"directory": os.getcwd(), "command": ''}
             print(f'Creating record [{arg_add}] "{os.getcwd()}"')
@@ -347,17 +347,19 @@ class Fcd:
             sys.exit(1)
         logging.debug('Exit')
 
-    def delete_handler(self, args: dict, records: list) -> None:
+    def delete_handler(self, arg_delete: str, records: list) -> None:
         """Handles the delete command line argument
 
         Args:
-            args: All command line arguments as a dict.
+            arg_delete: String containing a complete, partial or empty record tag.
             records: All the records in a sorted alphabetic list
 
         Returns: None
         """
-        logging.debug('Enter')
-        arg_delete = args.get('delete')
+        if not isinstance(arg_delete, str):
+            raise ValueError(f'Invalid type: {type(arg_delete)}')
+        logging.debug('Enter: arg_delete=%s', arg_delete)
+
         if arg_delete is True or arg_delete not in self._db:
             # No or incomplete argument provided, let's go into interactive mode
             if arg_delete is True:
@@ -398,7 +400,12 @@ class Fcd:
 
         Returns: None
         """
-        logging.debug('Enter')
+        if not isinstance(args, dict):
+            raise ValueError(f'Invalid type: {type(args)}')
+        if not isinstance(records, list):
+            raise ValueError(f'Invalid type: {type(records)}')
+        logging.debug('Enter: cmd=%s', args.get('command'))
+
         if args.get('add') in self._db:
             alias = args.get('add')
         else:
@@ -428,8 +435,10 @@ class Fcd:
         logging.debug('Enter')
         try:
             if os.path.exists(self._files.dir_file):
+                logging.debug('Removing %s', self._files.dir_file)
                 os.remove(self._files.dir_file)
             if os.path.exists(self._files.cmd_file):
+                logging.debug('Removing %s', self._files.cmd_file)
                 os.remove(self._files.cmd_file)
         except OSError as io_error:
             logging.error(io_error)
@@ -455,20 +464,22 @@ class Fcd:
             records.append(record)
         logging.debug('records=%s', records)
 
-        # Act on the command line arguments given.
+        # Act on zero or more command line arguments provided.
         try:
-            if args.get('alias') is not None or len(sys.argv) == 1 \
-                or (args.get('log_level') is not None and len(sys.argv) == 3):
-                # A partial or complete alias or no argument at all given from command line
-                self.alias_handler(args, records)
+            alias = args.get('alias')
+            if alias is not None or len(sys.argv) == 1:
+                # A partial, complete or no alias at all given from command line
+                if len(sys.argv) == 1:
+                    alias = '' # No alias provided on command line, create an empty string
+                self.alias_handler(alias, records)
 
             if args.get('add') is not None:
-                self.add_handler(args)
+                self.add_handler(args.get('add'))
             elif args.get('delete') is not None:
                 # Delete is mutually exclusive with Add
-                self.delete_handler(args, records)
+                self.delete_handler(args.get('delete'), records)
 
-            if args.get('command') is not None:
+            if args.get('command') is not None and args.get('delete') is None:
                 self.command_handler(args, records)
         except KeyboardInterrupt:
             print('Keyboard interrupt')
