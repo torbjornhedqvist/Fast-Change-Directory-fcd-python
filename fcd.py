@@ -10,6 +10,8 @@ to frequently visited directories. Since it's impossible to change your shell's 
 directory from within the program this program requires some additional shell scripts,
 (included in the database). See the README.md for more information.
 """
+import logging
+# import logging.config
 import sys
 import os
 import argparse
@@ -17,6 +19,13 @@ import json
 import readline
 
 VERSION = '1.1.0'
+
+# Local file logging, use level=logging.DEBUG for troubleshooting.
+logging.basicConfig(filename=f'{os.path.expanduser("~")}{"/fcd.log"}',
+                    filemode='w',
+                    format='%(asctime)s:[%(levelname)s]:%(name)s:%(filename)s:%(funcName)s:\
+%(lineno)d:(%(message)s)',
+                    level=logging.INFO)
 
 class Color: # pylint: disable=too-few-public-methods
     """ANSI Colors to be used in terminal output"""
@@ -61,6 +70,7 @@ class Files: # pylint: disable=too-few-public-methods
     """A class with all predefined filenames as class global attributes used by the program."""
 
     def __init__(self) -> None:
+        logging.debug('Files: Create instance')
         self._db_file = f'{os.path.expanduser("~")}{"/.fcd.json"}'
         self._dir_file = f'{os.path.expanduser("~")}{"/.fcd_dir"}'
         self._cmd_file = f'{os.path.expanduser("~")}{"/.fcd_cmd"}'
@@ -85,16 +95,19 @@ class Files: # pylint: disable=too-few-public-methods
     @db_file.setter
     def db_file(self, value: str) -> None:
         """Set the database filename"""
+        logging.debug(value)
         self._db_file = value
 
     @dir_file.setter
     def dir_file(self, value: str) -> None:
         """Set the directory path filename"""
+        logging.debug(value)
         self._dir_file = value
 
     @cmd_file.setter
     def cmd_file(self, value: str) -> None:
         """Set the command filename"""
+        logging.debug(value)
         self._cmd_file = value
 
 
@@ -106,6 +119,7 @@ class TabComplete: # pylint: disable=too-few-public-methods
     """
 
     def __init__(self, aliases: list) -> None:
+        logging.debug('TabComplete: Create instance')
         self._aliases = aliases
 
     def complete(self, text: str, state: int) -> str:
@@ -118,6 +132,7 @@ class Db:
     """Class to load and save the database file"""
 
     def __init__(self, db_file: str) -> None:
+        logging.debug('Db: Create instance')
         self._db_file = db_file
 
     def load(self) -> dict:
@@ -126,11 +141,13 @@ class Db:
         Returns: database. The whole database as a dict of dicts with records where each
         record is a dict containing the key value pairs of directory and command.
         """
+        logging.debug('Enter')
         try:
             if os.path.exists(self._db_file):
                 with open(self._db_file, encoding = 'utf-8') as file:
                     database = json.load(file)
             else:
+                logging.info('No database')
                 print(f'{Color.LIGHT_YELLOW}No database {self._db_file} exists ', end='')
                 print('in your home directory, first time usage?')
                 print('Creates a new database with a dummy record which can be removed later.')
@@ -138,39 +155,45 @@ class Db:
                 json_string = '{"dummy": {"directory": "/dummy", "command": ""}}'
                 database = json.loads(json_string)
                 self.save(database)
-            return database
         except IOError as io_error:
+            logging.error(io_error)
             sys.exit(io_error)
         except json.decoder.JSONDecodeError as json_decoder_error:
             print(f'{self._db_file} is empty, please delete the file and execute again')
+            logging.info('%s exists but is empty', self._db_file)
             sys.exit(json_decoder_error)
-
+        logging.debug('Exit: %s', database)
+        return database
 
     def save(self, database: dict) -> None:
         """Save the current database in memory to file
         """
+        logging.debug('Enter')
         try:
             with open(self._db_file, 'w', encoding = 'utf-8') as file:
                 json.dump(database, file)
         except IOError as io_error:
             sys.exit(io_error)
+        logging.debug('Exit')
 
 
 class Fcd:
     """Main Class for Fast Change Directory (fcd)"""
 
     def __init__(self) -> None:
+        logging.debug('Fcd: Create instance')
         self._files = Files()
         self._db_handler = Db(self._files.db_file)
         self._db = self._db_handler.load()
 
-        # Aliases to be used for tab completion
+        # Aliases in alphabetic sorted order to be used for tab completion
         self._aliases = sorted(self._db.keys(), key=str.lower)
+        logging.debug('self._aliases=%s', self._aliases)
         # A TabComplete instance prepared with a list of aliases created from all records in the
         # database.
         self._completer = TabComplete(self._aliases)
 
-    def save_for_later_execution(self, alias: str):
+    def save_for_later_execution(self, alias: str) -> None:
         """Save the directory path and command, (if not empty) to the separate files
         self._files.dir_file and self._files.cmd_file. These files will be used later
         by the external bash script to change directory and execute the command if available.
@@ -178,7 +201,10 @@ class Fcd:
         Args:
             alias: alias as a string which is the key to the record containing the directory
             and commands to be saved.
+
+        Returns: None
         """
+        logging.debug('Enter')
         if os.path.isdir(self._db[alias]['directory']):
             # The directory path stored in the database actually exists in the file system,
             # save the directory path to file.
@@ -187,6 +213,7 @@ class Fcd:
                 with open(self._files.dir_file, 'w', encoding = 'utf-8') as file:
                     file.write(dir_path)
             except IOError as io_error:
+                logging.error(io_error)
                 sys.exit(io_error)
 
             if self._db[alias]['command'] != '':
@@ -196,11 +223,14 @@ class Fcd:
                     with open(self._files.cmd_file, 'w', encoding = 'utf-8') as file:
                         file.write(cmd)
                 except IOError as io_error:
+                    logging.error(io_error)
                     sys.exit(io_error)
         else:
             print(f'{Color.LIGHT_RED}Directory "{self._db[alias]["directory"]}" ', end='')
             print(f'doesn\'t exist, recommended to remove record{Color.RESET}')
+            logging.warning('%s doesn\'t exist', self._db[alias]["directory"])
             sys.exit(1)
+        logging.debug('Exit')
 
     def list_records(self, records: list, alias: str = '', show_cmd: bool = False,
                     use_colors: bool = True) -> None:
@@ -215,7 +245,10 @@ class Fcd:
             use_colors: Default True and will will toggle the output color if the first character
                 changes for the alias in the next record in records. If set to False no colors
                 will be used.
+
+        Returns: None
         """
+        logging.debug('Enter')
         first_char = ''
         if use_colors is True:
             current_color = Color.LIGHT_BLUE
@@ -236,6 +269,7 @@ class Fcd:
                 else:
                     print(f'{current_color}[{record[0]}] {record[1]}')
         print(Color.RESET, end='')
+        logging.debug('Exit')
 
     def read_input(self, hook_message: str, prompt: str = 'fcd> ') -> str:
         """Common function to use the tab completer function and read an input line
@@ -247,6 +281,7 @@ class Fcd:
 
         Returns: The output given from the input() call as a string.
         """
+        logging.debug('Enter: %s: %s', hook_message, prompt)
         readline.parse_and_bind("tab: complete")
         readline.set_completer(self._completer.complete)
         def hook():
@@ -255,6 +290,7 @@ class Fcd:
 
         readline.set_pre_input_hook(hook)
         line = input(prompt)
+        logging.debug('Exit: %s', line)
         return line
 
     def alias_handler(self, args: dict, records: list) -> None:
@@ -266,7 +302,8 @@ class Fcd:
 
         Returns: None
         """
-        if len(sys.argv) == 1:
+        logging.debug('Enter')
+        if len(sys.argv) == 1 or (args.get('log_level') is not None and len(sys.argv) == 3):
             # No arguments at all, including alias given from command line
             # Indicates that the user would like to see the full content of the database and
             # choose an alias from the listed records.
@@ -286,6 +323,7 @@ class Fcd:
                     self.list_records(records, alias)
             # Now we have a complete alias found in database
             self.save_for_later_execution(alias)
+        logging.debug('Exit')
 
     def add_handler(self, args: dict) -> None:
         """Handles the add command line argument and add a new record with alias and current
@@ -296,6 +334,7 @@ class Fcd:
 
         Returns: None
         """
+        logging.debug('Enter')
         arg_add = args.get('add')
         if arg_add not in self._db:
             add_record = {"directory": os.getcwd(), "command": ''}
@@ -304,7 +343,9 @@ class Fcd:
             self._db_handler.save(self._db)
         else:
             print(f'{Color.LIGHT_RED}Alias "{arg_add}" already exists, aborting!{Color.RESET}')
+            logging.warning('Alias "%s" already exists, aborting!', arg_add)
             sys.exit(1)
+        logging.debug('Exit')
 
     def delete_handler(self, args: dict, records: list) -> None:
         """Handles the delete command line argument
@@ -315,6 +356,7 @@ class Fcd:
 
         Returns: None
         """
+        logging.debug('Enter')
         arg_delete = args.get('delete')
         if arg_delete is True or arg_delete not in self._db:
             # No or incomplete argument provided, let's go into interactive mode
@@ -345,6 +387,7 @@ class Fcd:
             records = tmp_records
             print(f'"{arg_delete}" deleted')
         self._db_handler.save(self._db)
+        logging.debug('Exit')
 
     def command_handler(self, args: dict, records: list) -> None:
         """Handles the command line argument for adding or updating a 'command' to a record.
@@ -355,6 +398,7 @@ class Fcd:
 
         Returns: None
         """
+        logging.debug('Enter')
         if args.get('add') in self._db:
             alias = args.get('add')
         else:
@@ -376,32 +420,45 @@ class Fcd:
         print(f'Updated or added command to record: [{alias}] ', end='')
         print(f'{self._db[alias]["directory"]} : {self._db[alias]["command"]}')
         self._db_handler.save(self._db)
+        logging.debug('Exit')
 
     def clean_up(self) -> None:
         """ Cleanup and remove files from previous execution
         """
+        logging.debug('Enter')
         try:
             if os.path.exists(self._files.dir_file):
                 os.remove(self._files.dir_file)
             if os.path.exists(self._files.cmd_file):
                 os.remove(self._files.cmd_file)
         except OSError as io_error:
+            logging.error(io_error)
             sys.exit(io_error)
+        logging.debug('Exit')
 
-    def execute(self, args) -> None:
-        """ Main Fcd execution
+    def args_handler(self, args) -> None:
+        """Handler of the command line arguments.
+
+        Args:
+            args: All command line arguments as a dict.
+
+        Returns: None
         """
 
         # Create a list of all records in alphabetic order which will be used as a helper in
         # combination with the tab completion.
+        logging.debug('Enter')
         records = []
         for alias in self._aliases:
             record = [alias, self._db[alias]['directory'],
                       self._db[alias]['command']]
             records.append(record)
+        logging.debug('records=%s', records)
 
+        # Act on the command line arguments given.
         try:
-            if args.get('alias') is not None or len(sys.argv) == 1:
+            if args.get('alias') is not None or len(sys.argv) == 1 \
+                or (args.get('log_level') is not None and len(sys.argv) == 3):
                 # A partial or complete alias or no argument at all given from command line
                 self.alias_handler(args, records)
 
@@ -415,20 +472,21 @@ class Fcd:
                 self.command_handler(args, records)
         except KeyboardInterrupt:
             print('Keyboard interrupt')
+            logging.info('Keyboard interrupt')
             sys.exit(1)
+        logging.debug('Exit')
 
 
 def main():
     """Main program"""
     fcd = Fcd()
     fcd.clean_up()
-
     args = parse_args()
     if args.get('version') is True:
         print(f'v{VERSION}')
         sys.exit(0)
 
-    fcd.execute(args)
+    fcd.args_handler(args)
 
 
 if __name__ == '__main__':
