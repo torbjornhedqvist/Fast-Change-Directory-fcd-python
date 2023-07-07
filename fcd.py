@@ -21,10 +21,10 @@ VERSION = '1.1.0'
 
 # Local file logging, use level=logging.DEBUG for troubleshooting.
 logging.basicConfig(filename=f'{os.path.expanduser("~")}{"/fcd.log"}',
-                    filemode='w',
+                    filemode='a', # append
                     format='%(asctime)s:[%(levelname)s]:%(name)s:%(filename)s:%(funcName)s:\
 %(lineno)d:(%(message)s)',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 class Color: # pylint: disable=too-few-public-methods
     """ANSI Colors to be used in terminal output"""
@@ -490,6 +490,7 @@ class Fcd:
 
 def main():
     """Main program"""
+    logging.debug('Enter')
     fcd = Fcd()
     fcd.clean_up()
     args = parse_args()
@@ -498,7 +499,7 @@ def main():
         sys.exit(0)
 
     fcd.args_handler(args)
-
+    logging.debug('Exit')
 
 if __name__ == '__main__':
     main()
