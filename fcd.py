@@ -5,10 +5,11 @@ You may use, distribute and modify this code under the
 terms of the MIT license. See LICENSE file in the project
 root for full license information.
 
-Fast Change Directory (fcd), fcd is a utility program to make it easier to create shortcuts
+Fast Change Directory (fcd), is a utility program to make it easier to create shortcuts
 to frequently visited directories. Since it's impossible to change your shell's current working
-directory from within the program this program requires some additional shell scripts,
-(included in the database). See the README.md for more information.
+directory from within the program this program requires some additional shell scripts to work
+as expected. These will be installed if install.sh is used or read the README.md for more
+information for manual configuration.
 """
 import logging
 import sys
@@ -26,20 +27,83 @@ logging.basicConfig(filename=f'{os.path.expanduser("~")}{"/fcd.log"}',
 %(lineno)d:(%(message)s)',
                     level=logging.INFO)
 
-class Color: # pylint: disable=too-few-public-methods
+class Color: # pylint: disable=too-many-instance-attributes
     """ANSI Colors to be used in terminal output"""
-    BLUE = '\033[34m'
-    LIGHT_BLUE = '\033[94m'
-    RED = '\033[31m'
-    LIGHT_RED = '\033[91m'
-    CYAN = '\033[96m'
-    PURPLE = '\033[95m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[33m'
-    LIGHT_YELLOW = '\033[93m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    RESET = '\033[0m'
+
+    def __init__(self) -> None:
+        self._blue = '\033[34m'
+        self._light_blue = '\033[94m'
+        self._red = '\033[31m'
+        self._light_red = '\033[91m'
+        self._cyan = '\033[96m'
+        self._purple = '\033[95m'
+        self._green = '\033[92m'
+        self._yellow = '\033[33m'
+        self._light_yellow = '\033[93m'
+        self._bold = '\033[1m'
+        self._underline = '\033[4m'
+        self._reset = '\033[0m'
+
+    # All getter methods
+    @property
+    def blue(self) -> str:
+        """Return ANSI Code for Blue"""
+        return self._blue
+
+    @property
+    def light_blue(self) -> str:
+        """Return ANSI Code for Light Blue"""
+        return self._light_blue
+
+    @property
+    def red(self) -> str:
+        """Return ANSI Code for Red"""
+        return self._red
+
+    @property
+    def light_red(self) -> str:
+        """Return ANSI Code for Light Red"""
+        return self._light_red
+
+    @property
+    def cyan(self) -> str:
+        """Return ANSI Code for Cyan"""
+        return self._cyan
+
+    @property
+    def purple(self) -> str:
+        """Return ANSI Code for Purple"""
+        return self._purple
+
+    @property
+    def green(self) -> str:
+        """Return ANSI Code for Green"""
+        return self._green
+
+    @property
+    def yellow(self) -> str:
+        """Return ANSI Code for Yellow"""
+        return self._yellow
+
+    @property
+    def light_yellow(self) -> str:
+        """Return ANSI Code for Light Yellow"""
+        return self._light_yellow
+
+    @property
+    def bold(self) -> str:
+        """Return ANSI Code for Bold"""
+        return self._bold
+
+    @property
+    def underline(self) -> str:
+        """Return ANSI Code for Underline"""
+        return self._underline
+
+    @property
+    def reset(self) -> str:
+        """Return ANSI Code for Reset"""
+        return self._reset
 
 
 def parse_args() -> dict:
@@ -133,6 +197,7 @@ class Db:
     def __init__(self, db_file: str) -> None:
         logging.debug('Db: Create instance')
         self._db_file = db_file
+        self._color = Color()
 
     def load(self) -> dict:
         """Load the database from file
@@ -146,10 +211,10 @@ class Db:
                 with open(self._db_file, encoding = 'utf-8') as file:
                     database = json.load(file)
             else:
-                print(f'{Color.LIGHT_YELLOW}No database {self._db_file} exists ', end='')
+                print(f'{self._color.light_yellow}No database {self._db_file} exists ', end='')
                 print('in your home directory, first time usage?')
                 print('Creates a new database with a dummy record which can be removed later.')
-                print(Color.RESET, end='')
+                print(self._color.reset, end='')
                 json_string = '{"dummy": {"directory": "/dummy", "command": ""}}'
                 database = json.loads(json_string)
                 self.save(database)
@@ -158,6 +223,7 @@ class Db:
             sys.exit(io_error)
         except json.decoder.JSONDecodeError as json_decoder_error:
             print(f'{self._db_file} is empty, please delete the file and execute again')
+            logging.warning('%s is empty, not allowed', self._db_file)
             sys.exit(json_decoder_error)
         logging.debug('Exit: %s', database)
         return database
@@ -180,6 +246,7 @@ class Fcd:
 
     def __init__(self) -> None:
         logging.debug('Fcd: Create instance')
+        self._color = Color()
         self._files = Files()
         self._db_handler = Db(self._files.db_file)
         self._db = self._db_handler.load()
@@ -226,8 +293,8 @@ class Fcd:
                     logging.error(io_error)
                     sys.exit(io_error)
         else:
-            print(f'{Color.LIGHT_RED}Directory "{self._db[alias]["directory"]}" ', end='')
-            print(f'doesn\'t exist, recommended to remove record{Color.RESET}')
+            print(f'{self._color.light_red}Directory "{self._db[alias]["directory"]}" ', end='')
+            print(f'doesn\'t exist, recommended to remove record{self._color.reset}')
             logging.warning('%s doesn\'t exist', self._db[alias]["directory"])
             sys.exit(1)
         logging.debug('Exit')
@@ -251,16 +318,16 @@ class Fcd:
         logging.debug('Enter')
         first_char = ''
         if use_colors is True:
-            current_color = Color.LIGHT_BLUE
+            current_color = self._color.light_blue
         else:
             current_color = ''
 
         for record in records:
             if use_colors is True and not record[0].startswith(first_char):
-                if current_color == Color.LIGHT_BLUE:
-                    current_color = Color.LIGHT_YELLOW
+                if current_color == self._color.light_blue:
+                    current_color = self._color.light_yellow
                 else:
-                    current_color = Color.LIGHT_BLUE
+                    current_color = self._color.light_blue
             first_char = record[0][0]
 
             if record[0].startswith(alias):
@@ -268,7 +335,7 @@ class Fcd:
                     print(f'{current_color}[{record[0]}] {record[1]} : {record[2]}')
                 else:
                     print(f'{current_color}[{record[0]}] {record[1]}')
-        print(Color.RESET, end='')
+        print(self._color.reset, end='')
         logging.debug('Exit')
 
     def read_input(self, hook_message: str, prompt: str = 'fcd> ') -> str:
@@ -342,7 +409,8 @@ class Fcd:
             self._db.update({arg_add : add_record})
             self._db_handler.save(self._db)
         else:
-            print(f'{Color.LIGHT_RED}Alias "{arg_add}" already exists, aborting!{Color.RESET}')
+            print(f'{self._color.light_red}Alias "{arg_add}" already exists, aborting!', end='')
+            print(self._color.reset)
             logging.warning('Alias "%s" already exists, aborting!', arg_add)
             sys.exit(1)
         logging.debug('Exit')
