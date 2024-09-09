@@ -21,7 +21,8 @@ fi
 
 # Created on succesful call to fcd.py
 if [ -e ~/.fcd_dir ]; then
-    cd `cat ~/.fcd_dir`
+    fcd_dir=$(<~/.fcd_dir)
+    cd "$fcd_dir"
 fi
 
 # Created if previous call to fcd.py had an attached extra command line
