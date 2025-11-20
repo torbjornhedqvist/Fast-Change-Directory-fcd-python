@@ -1,0 +1,33 @@
+
+flowchart TD
+    A["main()"] --> B[Create Fcd instance]
+    B --> B1[Create Color, Files, Db, TabComplete objects]
+    B --> C["clean_up()"]
+    C --> D["parse_args()"]
+    D --> E{version flag?}
+    E -->|Yes| F[Exit]
+    E -->|No| G["args_handler()"]
+    
+    G --> H{Arguments}
+    H -->|alias| I["alias_handler()"]
+    H -->|add| J["add_handler()"]
+    H -->|delete| K["delete_handler()"]
+    H -->|command| L["command_handler()"]
+    
+    I --> M["save_for_later_execution()"]
+    J --> N[Save database]
+    K --> N
+    L --> N
+    
+    M --> O[End]
+    N --> O
+    F --> O
+
+```
+## Objects Created:
+- **Fcd**: Main program controller
+- **Color**: ANSI color codes
+- **Files**: File paths (~/.fcd.json, ~/.fcd_dir, ~/.fcd_cmd)
+- **Db**: Database handler
+- **TabComplete**: Tab completion for aliases
+```
