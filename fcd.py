@@ -33,6 +33,7 @@ class Color: # pylint: disable=too-many-instance-attributes
     def __init__(self) -> None:
         self._blue = '\033[34m'
         self._light_blue = '\033[94m'
+        self._bright_blue = '\033[38;5;39m'
         self._red = '\033[31m'
         self._light_red = '\033[91m'
         self._cyan = '\033[96m'
@@ -54,6 +55,11 @@ class Color: # pylint: disable=too-many-instance-attributes
     def light_blue(self) -> str:
         """Return ANSI Code for Light Blue"""
         return self._light_blue
+
+    @property
+    def bright_blue(self) -> str:
+        """Return ANSI Code for Bright Blue (256-color, matches ls dir color)"""
+        return self._bright_blue
 
     @property
     def red(self) -> str:
@@ -318,16 +324,16 @@ class Fcd:
         logging.debug('Enter')
         first_char = ''
         if use_colors is True:
-            current_color = self._color.light_blue
+            current_color = self._color.bright_blue
         else:
             current_color = ''
 
         for record in records:
             if use_colors is True and not record[0].startswith(first_char):
-                if current_color == self._color.light_blue:
-                    current_color = self._color.light_yellow
+                if current_color == self._color.bright_blue:
+                    current_color = self._color.red
                 else:
-                    current_color = self._color.light_blue
+                    current_color = self._color.bright_blue
             first_char = record[0][0]
 
             if record[0].startswith(alias):
