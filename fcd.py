@@ -363,6 +363,9 @@ class Fcd:
 
         readline.set_pre_input_hook(hook)
         line = input(prompt)
+        # Trim a trailing '/' that tab-completion may append for a directory name,
+        # e.g. "erepos/" becomes "erepos".
+        line = line.rstrip('/')
         logging.debug('Exit: %s', line)
         return line
 
@@ -380,6 +383,10 @@ class Fcd:
         if not isinstance(records, list):
             raise ValueError(f'Invalid type: {type(records)}')
         logging.debug('Enter: alias="%s"', alias)
+
+        # Trim a trailing '/' that shell tab-completion may append for a directory
+        # name, e.g. "erepos/" becomes "erepos" before comparison starts.
+        alias = alias.rstrip('/')
 
         if alias in self._db:
             # A complete alias found in database
@@ -409,6 +416,17 @@ class Fcd:
             raise ValueError(f'Invalid type: {type(arg_add)}')
         logging.debug('Enter: arg_add=%s', arg_add)
 
+        # Trim a trailing '/' that shell tab-completion may append for a directory
+        # name, e.g. "erepos/" becomes "erepos".
+        arg_add = arg_add.rstrip('/')
+
+        # A generated alias name must not contain the path separator '/'.
+        if '/' in arg_add:
+            print(f'{self._color.light_red}Alias "{arg_add}" is invalid, ', end='')
+            print(f'"/" is not allowed in an alias name, aborting!{self._color.reset}')
+            logging.warning('Alias "%s" contains "/", not allowed', arg_add)
+            sys.exit(1)
+
         if arg_add not in self._db:
             add_record = {"directory": os.getcwd(), "command": ''}
             print(f'Creating record [{arg_add}] "{os.getcwd()}"')
@@ -433,6 +451,12 @@ class Fcd:
         if not isinstance(arg_delete, str):
             raise ValueError(f'Invalid type: {type(arg_delete)}')
         logging.debug('Enter: arg_delete=%s', arg_delete)
+
+        # Trim a trailing '/' that shell tab-completion may append for a directory
+        # name, e.g. "erepos/" becomes "erepos". arg_delete may be the boolean True
+        # (when -d is given without a value), so only trim an actual string.
+        if arg_delete is not True:
+            arg_delete = arg_delete.rstrip('/')
 
         if arg_delete is True or arg_delete not in self._db:
             # No or incomplete argument provided, let's go into interactive mode
