@@ -108,13 +108,6 @@ $ g -c <command>     # set the command for an entry
 $ g -c               # prompt for the command interactively
 ```
 
-Delete an entry:
-
-```bash
-$ g -d <alias>       # delete a specific entry
-$ g -d               # pick the entry to delete interactively
-```
-
 More help: `g -h` / `g --help`. Version: `g -v`.
 
 ## How it works
