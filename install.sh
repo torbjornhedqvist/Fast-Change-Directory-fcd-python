@@ -143,8 +143,8 @@ if [ "$classic" = true ] ; then
     fi
 
     # The classic installer copies its files relative to the current directory.
-    # It is run completely unmodified; it adds the original '++' alias, which we
-    # then replace with the same g / g+ / g- aliases the new version uses.
+    # It installs the g / g+ / g- aliases itself; we then rewrite them into the
+    # managed block, so switching between the two versions stays clean.
     cd "$SCRIPT_DIR/classic" || { echo "classic/ directory not found."; exit 1; }
     bash ./install.sh
     classic_rc=$?

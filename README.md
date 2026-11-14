@@ -66,10 +66,11 @@ the [`classic/`](./classic) directory. Install it instead with:
 ```
 
 Run `./install.sh` again without the flag to switch back to the new version.
-Both versions get the same `g`, `g+` and `g-` aliases (the classic code itself
-is unmodified; `classic/install.sh` still adds its original `++` alias, which
-the top-level installer replaces). Your `~/.fcd.json` database is shared and
-never modified by the installer. See `./install.sh --help` for a summary.
+Both versions use the same `g`, `g+` and `g-` aliases. The classic program
+itself (`fcd.py`, `fcd.sh`) is unmodified; only its installer and README were
+updated to use `g+`/`g-` instead of the old `++`. Your `~/.fcd.json` database
+is shared and never modified by the installer. See `./install.sh --help` for a
+summary.
 
 ### Option 2 — manual
 

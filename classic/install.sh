@@ -121,14 +121,26 @@ else
     echo "$HOME/.bash_aliases already exists."
 fi
 
-cat $HOME/.bash_aliases | grep "alias ++=" &>/dev/null
+cat $HOME/.bash_aliases | grep "alias g+=" &>/dev/null
 if [ $? -ne 0 ] ; then
-    echo "Adding the ++ alias."
+    echo "Adding the g+ alias."
     echo "# Aliases created by fcd installation script" >> $HOME/.bash_aliases
-    echo "alias ++='fcd.py -a \"\$@\"'" >> $HOME/.bash_aliases
+    echo "alias g+='fcd.py -a \"\$@\"'" >> $HOME/.bash_aliases
 else
     if [[ "$update" == "false" ]] ; then
-        echo "Seems ++ alias is already set. Please create your own aliases."
+        echo "Seems g+ alias is already set. Please create your own aliases."
+        echo "Bailing out..."
+        exit 1
+    fi
+fi
+
+cat $HOME/.bash_aliases | grep "alias g-=" &>/dev/null
+if [ $? -ne 0 ] ; then
+    echo "Adding the g- alias."
+    echo "alias g-='fcd.py -d \"\$@\"'" >> $HOME/.bash_aliases
+else
+    if [[ "$update" == "false" ]] ; then
+        echo "Seems g- alias is already set. Please create your own aliases."
         echo "Bailing out..."
         exit 1
     fi

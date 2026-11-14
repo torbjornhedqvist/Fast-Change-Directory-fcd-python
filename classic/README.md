@@ -65,11 +65,13 @@ efficient. Update or create the file ~/.bash_alias in your home directory and
 open it with your favorite editor and add the following lines:
 
 ```bash
-alias ++='fcd.py -a "$@"'
 alias g='source ~/bin/fcd.sh "$@"'
+alias g+='fcd.py -a "$@"'
+alias g-='fcd.py -d "$@"'
 ```
 
-> **_NOTE:_** Why g as an alias? Simple, g for (g)oto ;)
+> **_NOTE:_** Why g as an alias? Simple, g for (g)oto ;) And `g+` / `g-` add
+> and delete. (Earlier versions used `++` for add.)
 
 Done, logout and login again to make sure all path's and aliases are set
 correctly.
@@ -83,7 +85,8 @@ A simple screenshot:
 *Examples:*
 
 ```bash
-$ ++ alias     To add current dir to my list with an associated alias.
+$ g+ alias     To add current dir to my list with an associated alias.
+$ g- [alias]   To delete an entry (pick it from the list if no alias is given).
 $ g alias      To change directory to a entry based on the alias or parts of
                an alias.
 $ g            You will be presented with a list of all entries you have saved
