@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fcd"
+version = "1.2.0"
+description = "Fast Change Directory (fcd) with prompt_toolkit fuzzy UI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Torbjorn Hedqvist" }]
+dependencies = ["prompt_toolkit==3.0.53"]
+
+[project.scripts]
+fcd = "fcd.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --cov=fcd --cov-report=term-missing --cov-fail-under=85"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["fcd"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.messages_control]
+# too-few-public-methods: small strategy/data classes are intentional.
+# import-outside-toplevel: prompt_toolkit is imported lazily inside functions so
+#   the package stays importable when it is absent (graceful readline fallback,
+#   FR-4.3). The imports cannot move to module top level without defeating that.
+disable = ["too-few-public-methods", "import-outside-toplevel"]

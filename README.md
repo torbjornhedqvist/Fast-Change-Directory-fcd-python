@@ -4,114 +4,132 @@
 
 ## Summary
 
-I'm a lazy person by nature. If I have to repeat a task multiple times I
-immediately starts to think how I can automate this boring task. One of these
-tasks are when you work in a bash shell and starts to change directory to
-frequently used directories. You start to type the same **cd** commands
-over and over again, normally followed by an **ls, ls -la or ll** command,
-right? These commands are repeated a lot during a normal working day.
+Tired of adding `cd` aliases for frequently visited directories and then
+hunting through your config files to remember what you called them? **fcd**
+replaces those tedious aliases with a fast, searchable shortcut database.
 
-After a while you create an alias for these and drops them into your
-`~/.bashrc` or `~/.bash_aliases` files and when its done the list of aliases
-will continuously grow and never get cleaned up.
+**fcd** behaves similarly to a `cd <path>` alias and can also run an extra
+command after changing directory (for example `ls -la`). If you forget a
+shortcut name, fcd lists all aliases and lets you pick one interactively.
 
-So, are you tired of adding aliases for frequently visited directories?
-Tired of searching through your aliases or other configuration file to find
-out how you named that smart shortcut?
+## What's new in this version (1.2.0)
 
-**fcd** is a solution for that. The benefit of **fcd** is to replace tedious
-aliases which are cumbersome to create, update and delete when you would like
-to create shortcuts to frequent visited directories.
+- **Fuzzy matching** — interactive selection now uses subsequence matching, so
+  typing `dwn` matches `downloads`. Matches are ranked best-first in a
+  live-filtering completion menu you can navigate with the arrow keys.
+- **Modern UI via `prompt_toolkit`** — replaces the old one-at-a-time readline
+  completion with a visible, scrollable menu.
+- **Isolated install** — `prompt_toolkit` is installed into fcd's **own
+  dedicated virtual environment**, never into your system Python. The launcher
+  calls that venv's interpreter by absolute path, so fcd works the same whether
+  or not you are inside some other project's virtual environment, and it can
+  never conflict with those environments.
+- **Graceful fallback** — if `prompt_toolkit` is unavailable, fcd automatically
+  falls back to the classic `readline` (prefix) completion instead of failing.
 
-**fcd** behaves similar to a `cd <path>` alias and it will also support adding
-extra commands after the change directory have taken place to be able to tailor
-the behavior. If you have forgotten the shortcut name you created for a
-specific alias the script supports a listing function of all created aliases,
-it even have tab completion support.
+## Requirements
 
-## Installation and setup
+- bash, GNU coreutils
+- Python 3.10+ with the `venv` module (on Debian/Ubuntu/WSL:
+  `sudo apt install python3-venv`)
+- Internet access the first time you install (to `pip install prompt_toolkit`)
 
-### You have two options
+## Installation
 
-***Option 1:*** Run the provided `install.sh` script which will create needed bin
-directory in the users home if it doesn't exists, copying all needed files to
-the bin, updating the `$PATH` environment if needed and finally creating some
-supporting shortcut aliases. Logout & login and you are ready to go.
-
-***Option 2:*** Do it manually and this is just a proposal of setup and you can
-of course tailor it according to your own preferences.
-
-1) If you don't have a bin directory in your `$HOME` directory, create one:
-`mkdir ~/bin`
-
-2) Check if `~/bin` is included in your `$PATH` environment:
-`echo $PATH`
-
-3) If it's not, include the path to ~/bin into your `$PATH` environment. It
-might vary which configuration file you have to update dependent on your
-linux distribution and setup. When bash is invoked as an interactive login
-shell, or as a non-interactive shell with the `--login` option, it first reads
-and executes commands from the file `/etc/profile`, if that file exists.
-After reading that file, it looks for `~/.bash_profile`, `~/.bash_login`, and
-`~/.profile` in that order. Example: `PATH="$HOME/bin:$PATH"`
-
-4) Copy fcd.py, fcd.sh, README.md and LICENSE to your ~/bin directory.
-
-5) The scripts needs to be executable and if needed change the execution flags
-`chmod u+x ~/bin/fcd.*`
-
-6) Create a few new aliases to make the use of the **fcd** script more
-efficient. Update or create the file ~/.bash_alias in your home directory and
-open it with your favorite editor and add the following lines:
+### Option 1 — install script (recommended)
 
 ```bash
-alias ++='fcd.py -a "$@"'
-alias g='source ~/bin/fcd.sh "$@"'
+./install.sh
 ```
 
-> **_NOTE:_** Why g as an alias? Simple, g for (g)oto ;)
+This will:
 
-Done, logout and login again to make sure all path's and aliases are set
-correctly.
+1. create `~/bin` (and add it to your `$PATH` if needed);
+2. copy the `fcd.py` launcher, the `fcd` package, and `fcd.sh` into `~/bin`;
+3. create a dedicated virtual environment at `~/bin/fcd-venv` and install the
+   pinned `prompt_toolkit` into it (the install **fails with a clear message**
+   if the venv or dependency install fails — it never silently pollutes your
+   system Python);
+4. install/refresh the `g`, `g+` and `g-` aliases in `~/.bash_aliases` inside a
+   managed, idempotent block (any older `fcd.py`-based `g+`/`g-`/`++` alias
+   lines are replaced so you never end up with duplicates).
 
-### Ready to peek and poke around
+Log out and back in (or `source ~/.bash_aliases`) and you are ready.
 
-A simple screenshot:
+#### Want the original version? Use `--classic`
 
-![](./screenshot.png)
-
-*Examples:*
+The original single-file, pure-stdlib fcd (v1.1.0) is preserved unchanged in
+the [`classic/`](./classic) directory. Install it instead with:
 
 ```bash
-$ ++ alias     To add current dir to my list with an associated alias.
-$ g alias      To change directory to a entry based on the alias or parts of
-               an alias.
-$ g            You will be presented with a list of all entries you have saved
-               and you could select one from the list based on the alias name.
-               Tab completion supported.
+./install.sh --classic
 ```
 
-If you want to add an extra command after the script have changed directory
-for you. For example you might want to have a **`ls - la`** of the directory
-this can be done with the command:
+Run `./install.sh` again without the flag to switch back to the new version.
+Both versions get the same `g`, `g+` and `g-` aliases (the classic code itself
+is unmodified; `classic/install.sh` still adds its original `++` alias, which
+the top-level installer replaces). Your `~/.fcd.json` database is shared and
+never modified by the installer. See `./install.sh --help` for a summary.
+
+### Option 2 — manual
+
+1. `mkdir -p ~/bin` and ensure `~/bin` is on your `$PATH`.
+2. Copy `deploy/fcd.py` (as `fcd.py`), the `src/fcd/` package directory (as
+   `fcd/`), `fcd.sh`, `README.md`, and `LICENSE` into `~/bin`.
+3. Create the venv and install the dependency:
+   ```bash
+   python3 -m venv ~/bin/fcd-venv
+   ~/bin/fcd-venv/bin/python -m pip install -r requirements.txt
+   ```
+4. Add these aliases to `~/.bash_aliases`:
+   ```bash
+   alias g='source ~/bin/fcd.sh "$@"'
+   alias g+='"$HOME/bin/fcd-venv/bin/python" "$HOME/bin/fcd.py" -a "$@"'
+   alias g-='"$HOME/bin/fcd-venv/bin/python" "$HOME/bin/fcd.py" -d "$@"'
+   ```
+
+> **Why `g`?** Simple, `g` for (g)oto ;) — and `g+` / `g-` add and delete.
+
+## Usage
 
 ```bash
-$ g -c <command>
-or
-$ g -c
-# And you will be prompted to add the command interactively
+$ g+ alias     Add the current directory to your list under <alias>.
+$ g- [alias]   Delete an entry (pick it interactively if no alias is given).
+$ g alias      Change directory to the entry matching <alias> (or part of it).
+$ g            List all saved entries and pick one interactively.
+               Fuzzy matching + arrow-key selection supported.
 ```
 
-For more information type:
-`g -h` or `g --help`
+Attach an extra command to run after the directory change:
 
-Hope you will enjoy using **fcd** and it will save some precious time for you.
+```bash
+$ g -c <command>     # set the command for an entry
+$ g -c               # prompt for the command interactively
+```
 
-### Other projects at github I found addressing the same use case
+Delete an entry:
 
-- <https://github.com/Gyumeijie/dirx>
-- <https://github.com/inwtx/Linux-change-directory-script>
+```bash
+$ g -d <alias>       # delete a specific entry
+$ g -d               # pick the entry to delete interactively
+```
 
-### Other own previous projects solving the same problems (written in perl)
+More help: `g -h` / `g --help`. Version: `g -v`.
 
-- <https://github.com/torbjornhedqvist/Fast-Change-Directory-fcd-perl>
+## How it works
+
+fcd cannot change your shell's directory from inside Python, so it writes the
+resolved directory to `~/.fcd_dir` (and any command to `~/.fcd_cmd`). The `g`
+alias sources `fcd.sh`, which reads those files to perform the actual `cd` and
+optionally run the command. This sentinel-file contract is unchanged from
+previous versions.
+
+### prompt_toolkit vs. readline
+
+With the dedicated venv present you get the full fuzzy, menu-driven UI. If fcd
+is ever run by an interpreter that lacks `prompt_toolkit`, it transparently
+falls back to the original `readline` behaviour (strict prefix completion).
+
+## License
+
+MIT — see the `LICENSE` file.
