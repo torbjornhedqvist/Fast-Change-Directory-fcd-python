@@ -14,6 +14,41 @@ else
     echo "All prerequisites are OK, let's start the installation."
 fi
 
+# Managed environment support. If $HOME/.bashrc.user exists, ~/.bashrc and the
+# login files must not be modified; ~/.bashrc.user is the place for private
+# settings. ~/.bash_aliases is still used for the aliases, but ~/.bashrc.user
+# then gets one small marked block that sources it and puts ~/bin on PATH.
+# FCD_RC_FILE=<file> selects another private rc file instead.
+RC_USER_FILE="${FCD_RC_FILE:-$HOME/.bashrc.user}"
+if [ -n "${FCD_RC_FILE:-}" ] || [ -f "$RC_USER_FILE" ] ; then
+    managed_env=true
+    echo "Managed environment: $RC_USER_FILE will be used instead of modifying login files."
+else
+    managed_env=false
+fi
+
+# Make the private rc file source ~/.bash_aliases and put ~/bin on PATH.
+# Idempotent: only the block between the markers is ever replaced.
+ensure_rc_hook() {
+    local rc="$RC_USER_FILE"
+    [ -f "$rc" ] || echo "# File created by fcd installation script" > "$rc"
+    if grep -q '# >>> fcd hook >>>' "$rc" ; then
+        sed -i '/# >>> fcd hook >>>/,/# <<< fcd hook <<</d' "$rc"
+    fi
+    {
+        echo ""
+        echo "# >>> fcd hook >>>"
+        echo "# Managed by fcd install.sh - safe to regenerate."
+        # Don't source it twice if the user's own lines already do.
+        if ! grep -q 'bash_aliases' "$rc" ; then
+            echo '[ -f "$HOME/.bash_aliases" ] && . "$HOME/.bash_aliases"'
+        fi
+        echo 'case ":$PATH:" in *":$HOME/bin:"*) ;; *) export PATH="$HOME/bin:$PATH" ;; esac'
+        echo "# <<< fcd hook <<<"
+    } >> "$rc"
+    echo "Updated the fcd block in $rc"
+}
+
 # Fresh install or updating
 update=false
 
@@ -69,7 +104,11 @@ ls -l $HOME/bin
 # If not, update the appropriate login configuration file
 if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
     echo "\$HOME/bin missing in \$PATH, adding it to appropriate configuration file."
-    if [ -f $HOME/.bash_profile ] ; then
+    if [ "$managed_env" = true ] ; then
+        # Managed environment: leave the login files alone. PATH is extended
+        # from the private rc file (see ensure_rc_hook below).
+        echo "PATH will be extended from $RC_USER_FILE."
+    elif [ -f $HOME/.bash_profile ] ; then
         echo "Found a $HOME/.bash_profile file."
         cat $HOME/.bash_profile |grep PATH= &>/dev/null
         if [ $? -eq 0 ] ; then
@@ -157,6 +196,12 @@ else
         echo "Bailing out..."
         exit 1
     fi
+fi
+
+# In a managed environment, make sure the private rc file loads the aliases
+# and puts ~/bin on PATH.
+if [ "$managed_env" = true ] ; then
+    ensure_rc_hook
 fi
 
 # Done

@@ -38,6 +38,11 @@ Usage: ./install.sh [--classic] [--help]
 
 Running the installer again with or without --classic switches between the
 two versions. The alias database ~/.fcd.json is never modified.
+
+If ~/.bashrc.user exists (managed environments where ~/.bashrc and the login
+files may not be modified) the installer leaves those files alone and adds one
+marked block to ~/.bashrc.user that sources ~/.bash_aliases and puts ~/bin on
+PATH. FCD_RC_FILE=<file> selects another private rc file for that block.
 USAGE_EOF
 }
 
@@ -68,6 +73,43 @@ if [ -z "${HOME:-}" ] ; then
     echo "Bailing out..."
     exit 1
 fi
+
+# ---------------------------------------------------------------------------
+# Managed environment support (classic/install.sh has the same logic).
+# If $HOME/.bashrc.user exists, ~/.bashrc and the login files must not be
+# modified; ~/.bashrc.user is the place for private settings. ~/.bash_aliases is
+# still used for the aliases, but ~/.bashrc.user then gets one small marked
+# block that sources it and puts ~/bin on PATH.
+# FCD_RC_FILE=<file> selects another private rc file instead.
+# ---------------------------------------------------------------------------
+RC_USER_FILE="${FCD_RC_FILE:-$HOME/.bashrc.user}"
+if [ -n "${FCD_RC_FILE:-}" ] || [ -f "$RC_USER_FILE" ] ; then
+    managed_env=true
+else
+    managed_env=false
+fi
+
+# Make the private rc file source ~/.bash_aliases and put ~/bin on PATH.
+# Idempotent: only the block between the markers is ever replaced.
+ensure_rc_hook() {
+    local rc="$RC_USER_FILE"
+    [ -f "$rc" ] || echo "# File created by fcd installation script" > "$rc"
+    if grep -q '# >>> fcd hook >>>' "$rc" ; then
+        sed -i '/# >>> fcd hook >>>/,/# <<< fcd hook <<</d' "$rc"
+    fi
+    {
+        echo ""
+        echo "# >>> fcd hook >>>"
+        echo "# Managed by fcd install.sh - safe to regenerate."
+        # Don't source it twice if the user's own lines already do.
+        if ! grep -q 'bash_aliases' "$rc" ; then
+            echo '[ -f "$HOME/.bash_aliases" ] && . "$HOME/.bash_aliases"'
+        fi
+        echo 'case ":$PATH:" in *":$HOME/bin:"*) ;; *) export PATH="$HOME/bin:$PATH" ;; esac'
+        echo "# <<< fcd hook <<<"
+    } >> "$rc"
+    echo "Updated the fcd block in $rc"
+}
 
 # ---------------------------------------------------------------------------
 # Remove the managed alias block written by the new installer, if present.
@@ -244,20 +286,27 @@ echo "Dependencies installed into the isolated fcd venv."
 # $PATH: ensure ~/bin is present
 # ---------------------------------------------------------------------------
 if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
-    echo "\$HOME/bin missing in \$PATH, adding it to a login configuration file."
-    added=false
-    for profile in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile" ; do
-        if [ -f "$profile" ] && grep -q 'PATH=' "$profile" ; then
-            sed -i 's|PATH="|PATH="$HOME/bin:|' "$profile"
-            echo "Updated PATH in $profile"
-            added=true
-            break
+    if [ "$managed_env" = true ] ; then
+        # Managed environment: leave the login files alone. PATH is extended
+        # from the private rc file (see ensure_rc_hook).
+        echo "\$HOME/bin missing in \$PATH; it will be added from $RC_USER_FILE."
+    else
+        echo "\$HOME/bin missing in \$PATH, adding it to a login configuration file."
+        added=false
+        for profile in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile" ; do
+            if [ -f "$profile" ] && grep -q 'PATH=' "$profile" ; then
+                sed -i 's|PATH="|PATH="$HOME/bin:|' "$profile"
+                echo "Updated PATH in $profile"
+                added=true
+                break
+            fi
+        done
+        if [ "$added" = false ] ; then
+            # Not fatal: this version's aliases and fcd.sh use absolute paths.
+            echo "Note: no login file with a PATH entry was found, so \$HOME/bin was not"
+            echo "added to your PATH. That is fine for fcd itself; add it yourself if"
+            echo "you want to run fcd.py by name."
         fi
-    done
-    if [ "$added" = false ] ; then
-        echo "Couldn't find a login file with a PATH entry; add \$HOME/bin to"
-        echo "your PATH manually. Bailing out..."
-        exit 1
     fi
 else
     echo "\$PATH already contains \$HOME/bin, no update needed"
@@ -268,12 +317,20 @@ fi
 # ---------------------------------------------------------------------------
 write_managed_aliases new
 
+# In a managed environment, make sure the private rc file loads the aliases.
+if [ "$managed_env" = true ] ; then
+    ensure_rc_hook
+    LOAD_FILE="$RC_USER_FILE"
+else
+    LOAD_FILE="$ALIASES_FILE"
+fi
+
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
 if [ "$update" = false ] ; then
     echo "Installation completed."
-    echo "Logout and login again (or 'source ~/.bash_aliases') to pick up aliases."
+    echo "Open a new shell (or 'source $LOAD_FILE') to pick up the aliases."
 else
     echo "Update completed."
 fi

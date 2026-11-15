@@ -56,6 +56,19 @@ This will:
 
 Log out and back in (or `source ~/.bash_aliases`) and you are ready.
 
+#### Managed environments (`~/.bashrc.user`)
+
+Some managed Linux environments don't allow `~/.bashrc` or the login files
+(`~/.profile` etc.) to be modified and provide `~/.bashrc.user` for private
+settings instead. If that file exists, the installer leaves everything else
+alone and adds **one marked block** to `~/.bashrc.user` that sources
+`~/.bash_aliases` (the aliases still live there) and puts `~/bin` on your
+`PATH`. Your own lines in `~/.bashrc.user` are not touched, and the block is
+not duplicated if the file already sources `~/.bash_aliases` itself. Re-running
+the installer replaces just that block. This applies to `--classic` too.
+
+`FCD_RC_FILE=<file> ./install.sh` uses a different file for that block.
+
 #### Want the original version? Use `--classic`
 
 The original single-file, pure-stdlib fcd (v1.1.0) is preserved unchanged in
