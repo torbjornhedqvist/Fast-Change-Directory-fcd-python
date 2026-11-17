@@ -257,6 +257,9 @@ class TestCleanUpAndArgs:
         files, _ = setup
         fcd = _make_fcd(files, [])
         add = mocker.patch.object(fcd, "add_handler")
+        # args_handler inspects sys.argv; pin it so the result does not depend
+        # on how pytest was invoked (plain `pytest` gives len(argv) == 1).
+        mocker.patch("fcd.core.sys.argv", ["fcd", "--add", "x"])
         # Act
         fcd.args_handler({"alias": None, "add": "x", "delete": None,
                           "command": None})
@@ -268,6 +271,7 @@ class TestCleanUpAndArgs:
         files, _ = setup
         fcd = _make_fcd(files, [])
         delete = mocker.patch.object(fcd, "delete_handler")
+        mocker.patch("fcd.core.sys.argv", ["fcd", "--delete", "x"])
         # Act
         fcd.args_handler({"alias": None, "add": None, "delete": "x",
                           "command": None})
